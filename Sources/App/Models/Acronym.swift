@@ -28,3 +28,5 @@ final class Acronym: Model {
         self.long = long
     }
 }
+
+extension Acronym: Content {}
