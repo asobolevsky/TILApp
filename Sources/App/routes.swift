@@ -10,8 +10,7 @@ func routes(_ app: Application) throws {
         return "Hello, world!"
     }
     
-    // MARK: - Acronyms
+    try app.register(collection: AcronymsController())
+    try app.register(collection: UsersController())
     
-    let acronymsController = AcronymsController()
-    try app.register(collection: acronymsController)
 }

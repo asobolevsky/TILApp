@@ -15,11 +15,12 @@ public func configure(_ app: Application) throws {
     ), as: .psql)
 
     app.migrations.add(CreateAcronym())
-    
-    app.logger.logLevel = .debug
+    app.migrations.add(CreateUser())
     
     try app.autoMigrate().wait()
 
     // register routes
     try routes(app)
+    
+    app.logger.logLevel = .debug
 }
