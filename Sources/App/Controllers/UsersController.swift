@@ -10,11 +10,11 @@ import Vapor
 
 struct UsersController: RouteCollection {
     func getAllHandle(_ req: Request) throws -> EventLoopFuture<[User]> {
-        return User.query(on: req.db).all()
+        User.query(on: req.db).all()
     }
     
     func getHandle(_ req: Request) throws -> EventLoopFuture<User> {
-        return User.find(req.parameters.get(Parameters.userID), on: req.db)
+        User.find(req.parameters.get(Parameters.userID), on: req.db)
             .unwrap(or: Abort(.notFound))
     }
     
@@ -25,7 +25,7 @@ struct UsersController: RouteCollection {
     }
     
     func getAcronymsHandle(_ req: Request) throws -> EventLoopFuture<[Acronym]> {
-        return User.find(req.parameters.get(Parameters.userID), on: req.db)
+        User.find(req.parameters.get(Parameters.userID), on: req.db)
             .unwrap(or: Abort(.notFound))
             .flatMap { user in
                 user.$acronyms.get(on: req.db)
@@ -33,13 +33,13 @@ struct UsersController: RouteCollection {
     }
     
     func boot(routes: RoutesBuilder) throws {
-        let usersRoute = routes.grouped(GeneralPaths.api, Paths.users)
-        usersRoute.get(use: getAllHandle)
-        usersRoute.post(use: createHandle)
+        let baseRoute = routes.grouped(GeneralPaths.api, Paths.users)
+        baseRoute.get(use: getAllHandle)
+        baseRoute.post(use: createHandle)
         
-        let usersRouteWithID = usersRoute.grouped(":\(Parameters.userID)")
-        usersRouteWithID.get(use: getHandle)
-        usersRouteWithID.get(Paths.acronyms, use: getAcronymsHandle)
+        let baseRouteWithID = baseRoute.grouped(":\(Parameters.userID)")
+        baseRouteWithID.get(use: getHandle)
+        baseRouteWithID.get(Paths.acronyms, use: getAcronymsHandle)
     }
     
     struct Paths {

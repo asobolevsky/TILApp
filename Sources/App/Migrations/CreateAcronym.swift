@@ -11,6 +11,7 @@ struct AcronymSchema {
     static let name = "acronyms"
     
     struct Fields {
+        static let id = FieldKey.string("id")
         static let short = FieldKey.string("short")
         static let long = FieldKey.string("long")
         static let userID = FieldKey.string("userID")
