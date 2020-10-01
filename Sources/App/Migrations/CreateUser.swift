@@ -11,6 +11,7 @@ struct UserSchema {
     static let name = "users"
     
     struct Fields {
+        static let id = FieldKey.string("id")
         static let name = FieldKey.string("name")
         static let username = FieldKey.string("username")
     }

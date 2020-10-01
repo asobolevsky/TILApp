@@ -16,14 +16,14 @@ struct AcronymSchema {
         static let userID = FieldKey.string("userID")
     }
 }
-p. 130
+
 struct CreateAcronym: Migration {
     func prepare(on database: Database) -> EventLoopFuture<Void> {
         database.schema(AcronymSchema.name)
             .id()
             .field(AcronymSchema.Fields.short, .string, .required)
             .field(AcronymSchema.Fields.long, .string, .required)
-            .field(AcronymSchema.Fields.userID, .uuid, .required)
+            .field(AcronymSchema.Fields.userID, .uuid, .required, .references(UserSchema.name, UserSchema.Fields.id))
             .create()
     }
     

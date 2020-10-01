@@ -9,16 +9,15 @@ import Fluent
 import Vapor
 
 struct AcronymsController: RouteCollection {
-    struct Parameters {
-         static let acronymID = "acronymID"
-    }
-    
     func getAllHandler(_ req: Request) throws -> EventLoopFuture<[Acronym]> {
         return Acronym.query(on: req.db).all()
     }
     
     func createHandler(_ req: Request) throws -> EventLoopFuture<Acronym> {
-        let acronym = try req.content.decode(Acronym.self)
+        let data = try req.content.decode(CreateAcronymData.self)
+        let acronym = Acronym(short: data.short,
+                              long: data.long,
+                              userID: data.userID)
         return acronym.save(on: req.db)
             .map { acronym }
     }
@@ -29,12 +28,13 @@ struct AcronymsController: RouteCollection {
     }
     
     func updateHandler(_ req: Request) throws -> EventLoopFuture<Acronym> {
-        let updatedAcronym = try req.content.decode(Acronym.self)
+        let updateData = try req.content.decode(CreateAcronymData.self)
         return Acronym.find(req.parameters.get(Parameters.acronymID), on: req.db)
             .unwrap(or: Abort(.notFound))
             .flatMap { acronym in
-                acronym.short = updatedAcronym.short
-                acronym.long = updatedAcronym.long
+                acronym.short = updateData.short
+                acronym.long = updateData.long
+                acronym.$user.id = updateData.userID
                 return acronym.save(on: req.db)
                     .map { acronym }
             }
@@ -53,13 +53,15 @@ struct AcronymsController: RouteCollection {
         guard let searchTerm = req.query[String.self, at: "term"] else {
             throw Abort(.badRequest)
         }
-//        return Acronym.query(on: req.db)
-//            .filter(\.$short == searchTerm)
-//            .all()
-        return Acronym.query(on: req.db).group(.or) { or in
-            or.filter(\.$short == searchTerm)
-            or.filter(\.$long == searchTerm)
-        }.all()
+        //        return Acronym.query(on: req.db)
+        //            .filter(\.$short == searchTerm)
+        //            .all()
+        return Acronym.query(on: req.db)
+            .group(.or) { or in
+                or.filter(\.$short == searchTerm)
+                or.filter(\.$long == searchTerm)
+            }
+            .all()
     }
     
     func getFirstHandler(_ req: Request) throws -> EventLoopFuture<Acronym> {
@@ -74,17 +76,39 @@ struct AcronymsController: RouteCollection {
             .all()
     }
     
+    func getUserHandler(_ req:Request) throws -> EventLoopFuture<User> {
+        return Acronym.find(req.parameters.get(Parameters.acronymID), on: req.db)
+            .unwrap(or: Abort(.notFound))
+            .flatMap { acronym in
+                acronym.$user.get(on: req.db)
+            }
+    }
+    
     func boot(routes: RoutesBuilder) throws {
-        let acronymsRoute = routes.grouped("api", "acronyms")
+        let acronymsRoute = routes.grouped(GeneralPaths.api, Paths.acronyms)
         acronymsRoute.get(use: getAllHandler)
         acronymsRoute.post(use: createHandler)
-        acronymsRoute.get("first", use: getFirstHandler)
-        acronymsRoute.get("search", use: searchHandler)
-        acronymsRoute.get("sorted", use: getSortedHandler)
+        acronymsRoute.get(Paths.first, use: getFirstHandler)
+        acronymsRoute.get(Paths.search, use: searchHandler)
+        acronymsRoute.get(Paths.sorted, use: getSortedHandler)
         
         let acronymsRouteWithID = acronymsRoute.grouped(":\(Parameters.acronymID)")
         acronymsRouteWithID.get(use: getHandler)
         acronymsRouteWithID.put(use: updateHandler)
         acronymsRouteWithID.delete(use: deleteHandler)
+        acronymsRouteWithID.get(Paths.user, use: getUserHandler)
+    }
+    
+    struct Paths {
+        static let acronyms: PathComponent = "acronyms"
+        
+        static let first: PathComponent = "first"
+        static let search: PathComponent = "search"
+        static let sorted: PathComponent = "sorted"
+        static let user: PathComponent = "user"
+    }
+    
+    struct Parameters {
+        static let acronymID = "acronymID"
     }
 }

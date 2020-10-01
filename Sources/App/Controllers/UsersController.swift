@@ -9,10 +9,6 @@ import Fluent
 import Vapor
 
 struct UsersController: RouteCollection {
-    struct Parameters {
-         static let userID = "userID"
-    }
-    
     func getAllHandle(_ req: Request) throws -> EventLoopFuture<[User]> {
         return User.query(on: req.db).all()
     }
@@ -28,13 +24,31 @@ struct UsersController: RouteCollection {
             .map { user }
     }
     
+    func getAcronymsHandle(_ req: Request) throws -> EventLoopFuture<[Acronym]> {
+        return User.find(req.parameters.get(Parameters.userID), on: req.db)
+            .unwrap(or: Abort(.notFound))
+            .flatMap { user in
+                user.$acronyms.get(on: req.db)
+            }
+    }
+    
     func boot(routes: RoutesBuilder) throws {
-        let usersRoute = routes.grouped("api", "users")
+        let usersRoute = routes.grouped(GeneralPaths.api, Paths.users)
         usersRoute.get(use: getAllHandle)
         usersRoute.post(use: createHandle)
         
         let usersRouteWithID = usersRoute.grouped(":\(Parameters.userID)")
         usersRouteWithID.get(use: getHandle)
+        usersRouteWithID.get(Paths.acronyms, use: getAcronymsHandle)
     }
     
+    struct Paths {
+        static let users: PathComponent = "users"
+        
+        static let acronyms: PathComponent = "acronyms"
+    }
+    
+    struct Parameters {
+         static let userID = "userID"
+    }
 }
