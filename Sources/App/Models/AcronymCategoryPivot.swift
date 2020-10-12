@@ -5,29 +5,34 @@
 //  Created by Aleksei Sobolevskii on 2020-10-01.
 //
 
-import Fluent
-import Vapor
+import FluentPostgreSQL
+import Foundation
 
-final class AcronymCategoryPivot: Model {
-    static let schema = AcronymCategoryPivotSchema.name
-    
-    @ID
-    var id: UUID?
-    
-    @Parent(key: AcronymCategoryPivotSchema.Fields.acronymID)
-    var acronym: Acronym
-    
-    @Parent(key: AcronymCategoryPivotSchema.Fields.categoryID)
-    var category: Category
-    
-    init() {}
-    
-    init(id: UUID? = nil, acronym: Acronym, category: Category) throws {
-        self.id = id
-        self.$acronym.id = try acronym.requireID()
-        self.$category.id = try category.requireID()
-    }
-    
+final class AcronymCategoryPivot: PostgreSQLUUIDPivot {
+  var id: UUID?
+  var acronymID: Acronym.ID
+  var categoryID: Category.ID
+
+  typealias Left = Acronym
+  typealias Right = Category
+  static let leftIDKey: LeftIDKey = \.acronymID
+  static let rightIDKey: RightIDKey = \.categoryID
+
+  init(_ acronym: Acronym, _ category: Category) throws {
+    self.acronymID = try acronym.requireID()
+    self.categoryID = try category.requireID()
+  }
 }
 
+extension AcronymCategoryPivot: ModifiablePivot {}
+
+extension AcronymCategoryPivot: Migration {
+  static func prepare(on connection: PostgreSQLConnection) -> Future<Void> {
+    return Database.create(self, on: connection) { builder in
+      try addProperties(to: builder)
+      builder.reference(from: \.acronymID, to: \Acronym.id, onDelete: .cascade)
+      builder.reference(from: \.categoryID, to: \Category.id, onDelete: .cascade)
+    }
+  }
+}
 

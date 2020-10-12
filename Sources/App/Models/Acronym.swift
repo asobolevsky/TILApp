@@ -5,38 +5,41 @@
 //  Created by Aleksei Sobolevskii on 2020-09-29.
 //
 
-import Fluent
 import Vapor
+import FluentPostgreSQL
 
-final class Acronym: Model {
-    static let schema = AcronymSchema.name
-    
-    @ID
-    var id: UUID?
-    
-    @Field(key: AcronymSchema.Fields.short)
-    var short: String
-    
-    @Field(key: AcronymSchema.Fields.long)
-    var long: String
-    
-    @Parent(key: AcronymSchema.Fields.userID)
-    var user: User
-    
-    @Siblings(
-        through: AcronymCategoryPivot.self,
-        from: \.$acronym,
-        to: \.$category)
-    var categories: [Category]
-    
-    init() {}
-    
-    init(id: UUID? = nil, short: String, long: String, userID: User.IDValue) {
-        self.id = id
-        self.short = short
-        self.long = long
-        self.$user.id = userID
-    }
+final class Acronym: Codable {
+  var id: Int?
+  var short: String
+  var long: String
+  var userID: User.ID
+
+  init(short: String, long: String, userID: User.ID) {
+    self.short = short
+    self.long = long
+    self.userID = userID
+  }
 }
 
+extension Acronym: PostgreSQLModel {}
 extension Acronym: Content {}
+extension Acronym: Parameter {}
+
+extension Acronym {
+  var user: Parent<Acronym, User> {
+    return parent(\.userID)
+  }
+
+  var categories: Siblings<Acronym, Category, AcronymCategoryPivot> {
+    return siblings()
+  }
+}
+
+extension Acronym: Migration {
+  static func prepare(on connection: PostgreSQLConnection) -> Future<Void> {
+    return Database.create(self, on: connection) { builder in
+      try addProperties(to: builder)
+      builder.reference(from: \.userID, to: \User.id)
+    }
+  }
+}
